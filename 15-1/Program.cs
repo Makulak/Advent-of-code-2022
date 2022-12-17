@@ -1,5 +1,9 @@
 ﻿string[] text = File.ReadAllLines(@"../../../input.txt");
-var field = new FieldH(100000, 50000);
+
+int yPosOfLine = 0;
+
+List<Coordinates> coordinatesOnYLine = new();
+List<Coordinates> beaconCoords = new();
 
 foreach (string line in text)
 {
@@ -8,82 +12,31 @@ foreach (string line in text)
     Coordinates sensorCoord = new Coordinates(parts[0]);
     Coordinates beaconCoord = new Coordinates(parts[1]);
 
-    field.AddSensorAndBeacon(sensorCoord, beaconCoord);
-    //field.WriteGridToConsole();
+    beaconCoords.Add(beaconCoord);
+
+    int distanceToNearestBeacon = sensorCoord.GetDistanceTo(beaconCoord);
+    int distanceToYLine = sensorCoord.GetDistanceTo(new Coordinates(sensorCoord.X, yPosOfLine));
+    int impossiblePointsCount = (distanceToNearestBeacon - distanceToYLine) * 2;
+
+    for (int x = 0; x < (int)Math.Floor((double)impossiblePointsCount / 2) + 1; x++)
+    {
+        Coordinates right = new Coordinates(sensorCoord.X + x, yPosOfLine);
+        Coordinates left = new Coordinates(sensorCoord.X - x, yPosOfLine);
+
+        if (!beaconCoords.Any(b => b.IsEqual(right)))
+            coordinatesOnYLine.Add(right);
+        if (!beaconCoords.Any(b => b.IsEqual(left)))
+            coordinatesOnYLine.Add(left);
+    }
 }
-    
-Console.WriteLine(field.WriteGridToConsole(60));
+int sum = coordinatesOnYLine.Select(c => c.X).Distinct().Count();
 
-class FieldH
+Console.WriteLine(sum);
+
+class SensorBeacon
 {
-    public char[,] Field { get; set; }
-    public int MinusMargin { get; set; }
-
-    public FieldH(int size, int minusMargin)
-    {
-        Field = new char[size, size];
-        MinusMargin = minusMargin;
-    }
-
-    public void AddMarginToCoordinates(Coordinates coord)
-    {
-        coord.X += MinusMargin;
-        coord.Y += MinusMargin;
-    }
-
-    public void AddSensorAndBeacon(Coordinates sensor, Coordinates beacon)
-    {
-        AddMarginToCoordinates(sensor);
-        AddMarginToCoordinates(beacon);
-
-        int radius = GetDistance(sensor, beacon);
-        MarkRadius(sensor, radius);
-
-        Field[sensor.X, sensor.Y] = 'S';
-        Field[beacon.X, beacon.Y] = 'B';
-    }
-
-    private void MarkRadius(Coordinates sensor, int maxDistance)
-    {
-        for (int y = 0; y < Field.GetLength(0); y++)
-        {
-            for (int x = 0; x < Field.GetLength(1); x++)
-            {
-                if (GetDistance(sensor, new Coordinates(x, y)) <= maxDistance && Field[x, y] == default(char))
-                    Field[x, y] = '#';
-            }
-        }
-    }
-
-    public int WriteGridToConsole(int? countLineNo = null)
-    {
-        int counter = 0;
-        for (int y = 0; y < Field.GetLength(0); y++)
-        {
-            for (int x = 0; x < Field.GetLength(1); x++)
-            {
-                //Console.Write(Field[x, y] == default(char) ?'.' : Field[x, y]);
-
-                if (y == countLineNo && Field[x, y] == '#')
-                    counter++;
-            }
-            //Console.WriteLine();
-        }
-        //Console.WriteLine();
-        //Console.WriteLine();
-
-        return counter;
-    }
-
-    private int GetDistance(Coordinates sensor, Coordinates beacon)
-    {
-        int MinX = Math.Min(sensor.X, beacon.X);
-        int MaxX = Math.Max(sensor.X, beacon.X);
-        int MinY = Math.Min(sensor.Y, beacon.Y);
-        int MaxY = Math.Max(sensor.Y, beacon.Y);
-
-        return MaxX - MinX + MaxY - MinY;
-    }
+    public Coordinates Sensor { get; set; }
+    public Coordinates Beacon { get; set; }
 }
 
 class Coordinates
@@ -102,5 +55,20 @@ class Coordinates
     {
         X = x;
         Y = y;
+    }
+
+    public int GetDistanceTo(Coordinates destination)
+    {
+        int MinX = Math.Min(destination.X, X);
+        int MaxX = Math.Max(destination.X, X);
+        int MinY = Math.Min(destination.Y, Y);
+        int MaxY = Math.Max(destination.Y, Y);
+
+        return MaxX - MinX + MaxY - MinY;
+    }
+
+    public bool IsEqual(Coordinates coord)
+    {
+        return X == coord.X && Y == coord.Y;
     }
 }
